@@ -1,0 +1,108 @@
+---
+title: "mscs18_1"
+author: "MAK Hetland"
+date: "May 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+require('knitr')
+knitr::knit_engines$set(python = reticulate::eng_python)
+knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
+```
+
+## Phyolotree for 722 isolates
+Read in libraries:
+```{r libraries_load}
+library("treeio")
+library("ggtree")
+library("RColorBrewer") 
+library("plotly")
+library("phangorn")
+library("phytools")
+library("plotrix")
+require("gdata")
+library("reticulate")
+use_python("/Users/Shared/anaconda3/bin/python3")
+library("readr")
+require("dplyr")
+```
+
+Read in the tree and midpoint root:
+```{r read_data, echo = TRUE}
+#Read in the tree
+tree <- read.tree("reddog_final.tree")
+#Midpoint root tree for visual representation
+tree_midroot <- midpoint(tree)
+```
+
+Load metadata:
+``` {r tree_metadata_red}
+#Read in metadata
+info <- read.csv('metadata.csv', sep=";", header=T)
+#Show the column names
+colnames(info) 
+```
+
+Prepare metadata:
+``` {r prep_info}
+#Extract column for ESBL
+x <- info[("ESBL")]
+#Match column to each isolate
+rownames(x) <- info$Sample
+#Choose your colours in the right order
+heatmap.colours=c("black", "white")
+#Specify which colour goes with which column value
+names(heatmap.colours) <- as.factor(c("No", "Yes"))
+```
+
+This chunck adds species label + colour for the species:
+```{r create tree, echo = TRUE}
+#Read tree with species label and colour
+p <- ggtree(tree_midroot, right=T, layout="circular") %<+% info + geom_tippoint(aes(colour=species), size=0.5) + scale_color_manual(na.value = "black", values=c("black", "firebrick","forestgreen", "darkblue"))  +  theme(legend.position="left", legend.key.size = unit(0.3,"line") ) 
+p #view the tree
+```
+
+Create "heatmap" of ESBL presence/absence:
+``` {r tree_heatmap}
+gheatmap(p, x, offset=0.001,  width=0.15, font.size=3, colnames=FALSE, hjust=0) + scale_fill_manual(values=heatmap.colours, breaks=names(heatmap.colours))
+```
+
+Add label and highlighting to ST's present in => 5 samples:
+```{python}
+import pandas as pd
+import numpy as np
+import itertools
+
+seqtypes_df = pd.read_csv("metadata.csv", delimiter = ";")  ##correct delimiter
+uniq_IDs = seqtypes_df['ST_grouped'].unique()
+temp= ""
+lista = open('lista.csv', 'w')
+the_print = open('the_print.csv', 'w')
+the_print.write('gheatmap(p, x, offset=0.001,  width=0.15, font.size=3, colnames=FALSE, hjust=0) + scale_fill_manual(values=heatmap.colours, breaks=names(heatmap.colours)) ')
+for st in uniq_IDs:
+  if not pd.isnull(st):
+      temp = ("#" + str(st) + "\n") # print ST type
+      the_print.write('+ geom_hilight(node='+st+', fill="azure3", extendto = 0.74) + geom_cladelabel(node='+st+', align=TRUE, offset.text = 0.1, fontsize=3, geom="text", label="'+st+'", angle="auto", barsize = 0.01, color="black") ')
+      temp += st + ' <- findMRCA(tree_midroot, c("'
+      for index, row in seqtypes_df.iterrows():
+          if row[7] == st:  ##Change for correct row
+              #print(row[0])
+              temp += ((row[0]) + '_L001","')
+      temp += ('), type=c("node"))')        
+      temp = temp.replace('",")','")')
+      #print(temp) #print finished output
+      lista.write(temp + " \n")
+```
+
+Create and save final tree:
+```{r tree_aesthetics, include=FALSE}
+listen <- read_file('lista.csv')
+eval(parse(text=listen))  
+the_print <- read_file('lista_tweaked.csv') #Manually tweaked to set different colours per ST
+
+#Edit colours
+eval(parse(text=the_print)) 
+tree_sunniva <- eval(parse(text=the_print)) 
+ggsave(tree_sunniva,file="final_tree.pdf", width=30, height=30)
+```
