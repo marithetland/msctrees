@@ -1,0 +1,70 @@
+---
+title: "mscs18_3"
+author: "MAK Hetland"
+date: "May 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+require('knitr')
+knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
+```
+
+Phyolotree for ST107 isolates (n=66)
+```{r libraries_print, eval=TRUE, include=FALSE}
+library("treeio")
+library("ggtree")
+library("RColorBrewer") 
+library("plotly")
+library("phangorn")
+library("phytools")
+library("plotrix")
+require("gdata")
+library("reticulate")
+library("readr")
+require("dplyr")
+```
+
+Read in the tree, midpoint root:
+```{r read_data, echo = TRUE}
+#Read in the tree
+tree <- read.tree("reddog.tree") 
+tree_midroot <- midpoint(tree)
+```
+Read in metadata:
+``` {r tree_metadata_red}
+info <- read.csv('metainfo.csv', sep=",", header=T)
+#Uncomment/run code below to check that cols have been loaded correctly.
+colnames(info) 
+```
+
+###Prepare metadata
+``` {r prep_info, echo=TRUE}
+#Extract columns of interest from info
+x <- info[,c("Spec_match", "X")]
+#Match columns to each isolate
+rownames(x) <- info$Sample_name 
+#Choose your colours in the right order and named correctly (like a dict for python)
+heatmap.colours=c("darkblue", "lightblue", '#fed976', '#fd8d3c', '#A6CEE3', 
+                  '#33a02c', '#f768a1','#ef6548', '#cab2d6', '#cc4c02', 
+                  '#ae017e', '#6a3d9a','#1F78B4', "navyblue", "pink", 
+                  "purple", "#9A6324", "#808000","#469990", "#f58231",
+                  '#fd8d3c', '#A6CEE3', '#33a02c')
+names(heatmap.colours) <- as.factor(c("strong", "weak", "ST10", "ST1249-1LV", "ST1250", 
+                                      "ST1456", "ST1533-3LV", "ST1642", "ST209-2LV", "ST2386", 
+                                      "ST355-2LV", "ST360-2LV", "ST440-3LV","ST447-3LV", "ST615-2LV", 
+                                      "ST616", "ST768-4LV", "ST622-1LV","ST1955-4LV", "ST919", 
+                                      "ST2011-2LV", "ST199", "Ref"))
+
+```
+
+Visualise the basic tree
+```{r create tree, echo = TRUE}
+p <- ggtree(tree_midroot, right=T) %<+% info + geom_tippoint(aes(colour=Species), size=2) + scale_color_manual(na.value = "black", values=c("brown", "firebrick1", "darkmagenta", "dodgerblue2", "forestgreen", "gold")) + geom_tiplab() + ggplot2::xlim(0, 1)
+```
+
+Add metadata to tree
+``` {r tree_heatmap, echo=TRUE}
+#Heatmap to add rings of data (extracted above) to the tree
+gheatmap(p, x, offset=0.08,  width=0.04, font.size=3, colnames_angle=-45, hjust=0) + scale_fill_manual(values=heatmap.colours, breaks=names(heatmap.colours))
+```

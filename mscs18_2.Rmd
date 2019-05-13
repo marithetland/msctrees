@@ -1,0 +1,53 @@
+---
+title: "mscs18_2"
+author: "M Hetland"
+date: "May 2019"
+output: html_document
+---
+  
+```{r setup, include=FALSE}
+require('knitr')
+knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
+```
+
+## Phyolotree ST107 isolates (n=66)
+Read in libraries:
+```{r libraries_load}
+library("treeio")
+library("ggtree")
+library("RColorBrewer") 
+library("plotly")
+library("phangorn")
+library("phytools")
+library("plotrix")
+require("gdata")
+library("readr")
+require("dplyr")
+```
+
+Read in the trees, midpoint root.
+```{r read_data, echo = TRUE}
+tree <- read.tree("ST107_pfge_ingroupsOnly.tree") 
+tree_midroot <- midpoint(tree)
+
+tree_with <- read.tree("ST107_pfge_with1Outgroup.tree") 
+tree_midroot_with <- midpoint(tree_with)
+```
+Add metadata:
+``` {r tree_metadata_red}
+info <- read.csv('pfge_metadata.csv', sep="\t", header=T)
+#Uncomment/run code below to check that cols have been loaded correctly.
+colnames(info) 
+```
+
+Visualise the btrees, coloured by PFGE groups as set in metadata-file:
+```{r create tree, echo = TRUE}
+#Read in circular tree with tippoints
+p_in <- ggtree(tree_midroot, right=T, ladderize=T) %<+% info + geom_tippoint(aes(colour=Group), size=2) + scale_color_manual(na.value = "black", values=c('blue2', 'darkmagenta', 'deeppink2', 'goldenrod3', 'firebrick3','chartreuse3', "black")) + geom_tiplab(aes(label=NewNames, size=2))
+
+p_in + ggplot2::xlim(0, 0.2)
+
+p_out <- ggtree(tree_midroot_with, right=T, ladderize=T) %<+% info + geom_tippoint(aes(colour=Group), size=2) + scale_color_manual(na.value = "black", values=c('blue2', 'darkmagenta', 'deeppink2', 'goldenrod3', 'firebrick3', 'black', 'chartreuse3')) + geom_tiplab(aes(label=NewNames, size=2))
+
+p_out + ggplot2::xlim(-1, 2)
+```
