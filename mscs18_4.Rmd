@@ -1,0 +1,73 @@
+---
+title: "mscs18_4"
+author: "M Hetland"
+date: "May 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+require('knitr')
+knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
+```
+
+## Phyolotree NORKAB ST107 isolates (n=66)
+Read in libraries:
+```{r libraries_load}
+library("treeio")
+library("ggtree")
+library("RColorBrewer") 
+library("plotly")
+library("phangorn")
+library("phytools")
+library("plotrix")
+require("gdata")
+library("reticulate")
+library("readr")
+require("dplyr")
+```
+
+###Read in the tree, midpoint root.
+```{r read_data, echo = TRUE}
+#Read in the tree
+tree <- read.tree("reddog.tree") 
+tree_midroot <- midpoint(tree)
+```
+
+``` {r tree_metadata_red}
+info <- read.csv('metadata.csv', sep=";", header=T)
+#Uncomment/run code below to check that cols have been loaded correctly.
+colnames(info) 
+```
+
+###Prepare metadata
+``` {r prep_info, echo=TRUE}
+#Extract columns of interest from info
+x <- info[,c("Hospital_anonym", "Region_anonym")]
+#Match columns to each isolate
+rownames(x) <- info$Sample 
+
+#Choose your colours in the right order and named correctly (like a dict for python)
+heatmap.colours=c('#fed976', '#fd8d3c', '#A6CEE3', '#33a02c', '#f768a1',
+                  '#ef6548', '#cab2d6', '#cc4c02', '#ae017e', '#6a3d9a', 
+                  '#1F78B4', "navyblue", "pink", 
+                  "purple", "#9A6324", "#808000","#469990", "#f58231")
+
+names(heatmap.colours) <- as.factor(c("H1", "H2", "H3", "H4", "H5", 
+                                      "H6", "H7", "H8", "H9", "H10", 
+                                      "H11", "H12", "H13", 
+                                      "R1", "R2", "R3", "R4", "R5"))
+```
+
+Visualise the basic tree:
+```{r create tree, echo = TRUE}
+#Read in circular tree with tippoints
+p <- ggtree(tree_midroot, right=T) %<+% info + geom_tippoint() + geom_tiplab(size=3)
+
+p #Visualises the tree
+```
+
+Add rings of metadata to tree:
+``` {r tree_heatmap, echo=TRUE}
+#Heatmap to add rings of data (extracted above) to the tree
+gheatmap(p, x, offset=0.001,  width=0.05, font.size=3, colnames_angle=-45, hjust=0) + scale_fill_manual(values=heatmap.colours, breaks=names(heatmap.colours))
+```
